@@ -19,6 +19,7 @@ limitations under the License.
 package graphite
 
 import (
+	"context"
 	"errors"
 	"net"
 	"strconv"
@@ -29,6 +30,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/intelsdi-x/snap-plugin-lib-go/v1/plugin"
 	"github.com/intelsdi-x/snap-relay/protocol"
+	"github.com/intelsdi-x/snap-relay/util"
 	"github.com/urfave/cli"
 )
 
@@ -47,20 +49,22 @@ var (
 )
 
 type graphite struct {
-	udp       protocol.Receiver
-	tcp       protocol.Receiver
-	metrics   chan *plugin.Metric
-	done      chan struct{}
-	isStarted bool
+	udp        protocol.Receiver
+	tcp        protocol.Receiver
+	metrics    chan *plugin.Metric
+	channelMgr util.ChannelManager
+	done       chan struct{}
+	isStarted  bool
 }
 
 func NewGraphite(opts ...Option) *graphite {
 	graphite := &graphite{
-		udp:       protocol.NewUDPListener(),
-		tcp:       protocol.NewTCPListener(),
-		metrics:   make(chan *plugin.Metric, 1000),
-		done:      make(chan struct{}),
-		isStarted: false,
+		udp:        protocol.NewUDPListener(),
+		tcp:        protocol.NewTCPListener(),
+		metrics:    make(chan *plugin.Metric, 1000),
+		done:       make(chan struct{}),
+		isStarted:  false,
+		channelMgr: util.NewChannelMgr(),
 	}
 
 	for _, opt := range opts {
@@ -71,8 +75,17 @@ func NewGraphite(opts ...Option) *graphite {
 
 type Option func(g *graphite) Option
 
-func (g *graphite) Metrics() chan *plugin.Metric {
-	return g.metrics
+// Metrics is provided a context used for communicating cancellation.
+func (g *graphite) Metrics(ctx context.Context) chan *plugin.Metric {
+	mchan := make(chan *plugin.Metric, 1000)
+	g.channelMgr.Add(mchan)
+	go func() {
+		select {
+		case <-ctx.Done():
+			g.channelMgr.Remove(mchan)
+		}
+	}()
+	return mchan
 }
 
 func UDPConnectionOption(conn *net.UDPConn) Option {
@@ -115,10 +128,10 @@ func TCPListenerOption(conn *net.TCPListener) Option {
 }
 
 func (g *graphite) Start() error {
-	log.Info("Starting graphite relay")
 	if g.isStarted {
 		return ErrAlreadyStarted
 	}
+	log.Info("Starting graphite relay")
 	if err := g.udp.Start(); err != nil {
 		return err
 	}
@@ -155,6 +168,18 @@ func (g *graphite) Start() error {
 				}
 			case <-g.done:
 				break
+			}
+		}
+	}()
+	// routine that dispatches graphite metrics to all available streams
+	go func() {
+		for {
+			select {
+			case m := <-g.metrics:
+				log.Debugf("dispatching metrics to %v streams", g.channelMgr.Count())
+				g.channelMgr.DispatchMetric(m)
+			case <-g.done:
+				return
 			}
 		}
 	}()

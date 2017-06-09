@@ -19,6 +19,7 @@ limitations under the License.
 package relay
 
 import (
+	"context"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
@@ -27,7 +28,7 @@ import (
 )
 
 type relayMetrics interface {
-	Metrics() chan *plugin.Metric
+	Metrics(context.Context) chan *plugin.Metric
 	Start() error
 }
 
@@ -41,7 +42,7 @@ func New(opts ...graphite.Option) plugin.StreamCollector {
 	}
 }
 
-func (r *relay) StreamMetrics(metrics_in chan []plugin.Metric, metrics_out chan []plugin.Metric, err chan string) error {
+func (r *relay) StreamMetrics(ctx context.Context, metrics_in chan []plugin.Metric, metrics_out chan []plugin.Metric, err chan string) error {
 	log.SetLevel(log.Level(plugin.LogLevel))
 	for metrics := range metrics_in {
 		log.Debug("starting StreamMetrics")
@@ -60,22 +61,27 @@ func (r *relay) StreamMetrics(metrics_in chan []plugin.Metric, metrics_out chan 
 			).Debug("received metrics")
 			if !graphiteDispatchStarted && strings.Contains(metric.Namespace.String(), "collectd") {
 				graphiteDispatchStarted = true
-				go dispatchMetrics(r.graphiteServer.Metrics(), metrics_out)
+				go dispatchMetrics(ctx, r.graphiteServer.Metrics(ctx), metrics_out)
 			}
 		}
 	}
 	return nil
 }
 
-func dispatchMetrics(in chan *plugin.Metric, out chan []plugin.Metric) {
-	for metric := range in {
-		log.WithFields(
-			log.Fields{
-				"metric": metric.Namespace.String(),
-				"data":   metric.Data,
-			},
-		).Debug("dispatching metrics")
-		out <- []plugin.Metric{*metric}
+func dispatchMetrics(ctx context.Context, in chan *plugin.Metric, out chan []plugin.Metric) {
+	for {
+		select {
+		case metric := <-in:
+			log.WithFields(
+				log.Fields{
+					"metric": metric.Namespace.String(),
+					"data":   metric.Data,
+				},
+			).Debug("dispatching metrics")
+			out <- []plugin.Metric{*metric}
+		case <-ctx.Done():
+			return
+		}
 	}
 }
 
