@@ -30,6 +30,14 @@ const (
 )
 
 func main() {
-	plugin.Flags = append(plugin.Flags, graphite.TCPListAddrFlag)
-	plugin.StartStreamCollector(relay.New(graphite.TCPListenAddrOption(&graphite.TCPAddr)), pluginName, pluginVersion)
+	plugin.Flags = append(plugin.Flags, graphite.GraphiteTCPListenPortFlag)
+	plugin.Flags = append(plugin.Flags, graphite.GraphiteUDPListenPortFlag)
+	plugin.StartStreamCollector(
+		relay.New(
+			graphite.TCPListenPortOption(&graphite.GraphiteTCPPort),
+			graphite.UDPListenPortOption(&graphite.GraphiteUDPPort),
+		),
+		pluginName,
+		pluginVersion,
+	)
 }

@@ -20,6 +20,7 @@ package protocol
 
 import (
 	"bufio"
+	"fmt"
 	"net"
 	"strings"
 
@@ -28,11 +29,11 @@ import (
 	"io"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/intelsdi-x/snap-plugin-lib-go/v1/plugin"
 )
 
 type tcpListener struct {
-	// addr is in the form addr:port (e.g. 127.0.0.1:1234)
-	addr     *string
+	port     *int
 	data     chan []byte
 	listener *net.TCPListener
 	done     chan struct{}
@@ -59,11 +60,11 @@ func TCPListenerOption(listener *net.TCPListener) tcpOption {
 	}
 }
 
-func TCPListenAddrOption(addr *string) tcpOption {
+func TCPListenPortOption(port *int) tcpOption {
 	return func(t *tcpListener) tcpOption {
-		prev := t.addr
-		t.addr = addr
-		return TCPListenAddrOption(prev)
+		prev := t.port
+		t.port = port
+		return TCPListenPortOption(prev)
 	}
 }
 
@@ -77,9 +78,9 @@ func (t *tcpListener) Stop() {
 
 func (t *tcpListener) listen() error {
 	if t.listener == nil {
-		addr := "localhost:0"
-		if t.addr != nil {
-			addr = *t.addr
+		addr := fmt.Sprintf("%v:0", plugin.ListenAddr)
+		if t.port != nil {
+			addr = fmt.Sprintf("%v:%v", plugin.ListenAddr, *t.port)
 		}
 		tcpAddr, err := net.ResolveTCPAddr("tcp", addr)
 		if err != nil {

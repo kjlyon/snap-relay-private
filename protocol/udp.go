@@ -26,15 +26,17 @@ import (
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/intelsdi-x/snap-plugin-lib-go/v1/plugin"
 )
 
 type udpListener struct {
+	port *int
 	data chan []byte
 	conn *net.UDPConn
 	done chan struct{}
 }
 
-func NewUDPListener(opts ...option) *udpListener {
+func NewUDPListener(opts ...udpOption) *udpListener {
 	listener := &udpListener{
 		data: make(chan []byte, 100),
 		done: make(chan struct{}),
@@ -45,19 +47,33 @@ func NewUDPListener(opts ...option) *udpListener {
 	return listener
 }
 
-type option func(u *udpListener) option
+type udpOption func(u *udpListener) udpOption
 
-func UDPConnectionOption(conn *net.UDPConn) option {
-	return func(u *udpListener) option {
+func UDPConnectionOption(conn *net.UDPConn) udpOption {
+	return func(u *udpListener) udpOption {
 		prev := u.conn
 		u.conn = conn
 		return UDPConnectionOption(prev)
 	}
 }
 
+func UDPListenPortOption(port *int) udpOption {
+	return func(u *udpListener) udpOption {
+		prev := u.port
+		u.port = port
+		return UDPListenPortOption(prev)
+	}
+}
+
 func (u *udpListener) listen() error {
 	if u.conn == nil {
-		udpAddr, err := net.ResolveUDPAddr("udp", "localhost:0")
+		udpAddr, err := net.ResolveUDPAddr(
+			"udp",
+			fmt.Sprintf("%v:%v",
+				plugin.ListenAddr,
+				*u.port,
+			),
+		)
 		if err != nil {
 			return err
 		}

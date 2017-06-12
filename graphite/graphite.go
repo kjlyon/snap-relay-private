@@ -37,14 +37,23 @@ import (
 var (
 	// ErrAlreadyStarted error
 	ErrAlreadyStarted = errors.New("server already started")
-	// TCPAddr
-	TCPAddr = "127.0.0.1:6123"
-	// TCPListAddrFlag for overriding the listen
-	TCPListAddrFlag cli.StringFlag = cli.StringFlag{
-		Name:        "graphite-tcp",
-		Usage:       "graphite TCP listen address and port",
-		Value:       TCPAddr,
-		Destination: &TCPAddr,
+	// GraphiteTCPPort
+	GraphiteTCPPort = 6123
+	// GraphiteTCPListenPortFlag for overriding the listen address
+	GraphiteTCPListenPortFlag cli.IntFlag = cli.IntFlag{
+		Name:        "graphite-tcp-port",
+		Usage:       "graphite TCP listen port",
+		Value:       GraphiteTCPPort,
+		Destination: &GraphiteTCPPort,
+	}
+	// GraphiteUDPAddr
+	GraphiteUDPPort = 6124
+	// GraphiteUDPListenAddrFlag for overriding the listen address
+	GraphiteUDPListenPortFlag cli.IntFlag = cli.IntFlag{
+		Name:        "graphite-udp-port",
+		Usage:       "graphite UDP listen port",
+		Value:       GraphiteUDPPort,
+		Destination: &GraphiteUDPPort,
 	}
 )
 
@@ -101,16 +110,31 @@ func UDPConnectionOption(conn *net.UDPConn) Option {
 	}
 }
 
-func TCPListenAddrOption(addr *string) Option {
+func UDPListenPortOption(port *int) Option {
 	return func(g *graphite) Option {
 		if g.isStarted {
 			log.WithFields(log.Fields{
-				"_block": "TCPListenAddrOption",
-			}).Warn("option cannot be set.  service already started")
-			return TCPListenAddrOption(addr)
+				"_block": "UDPListenPortOption",
+				"detail": "service already started",
+			}).Warn("option cannot be set")
+			return UDPListenPortOption(port)
 		}
-		g.tcp = protocol.NewTCPListener(protocol.TCPListenAddrOption(addr))
-		return TCPListenAddrOption(addr)
+		g.udp = protocol.NewUDPListener(protocol.UDPListenPortOption(port))
+		return UDPListenPortOption(port)
+	}
+}
+
+func TCPListenPortOption(port *int) Option {
+	return func(g *graphite) Option {
+		if g.isStarted {
+			log.WithFields(log.Fields{
+				"_block": "TCPListenPortOption",
+				"detail": "service already started",
+			}).Warn("option cannot be set")
+			return TCPListenPortOption(port)
+		}
+		g.tcp = protocol.NewTCPListener(protocol.TCPListenPortOption(port))
+		return TCPListenPortOption(port)
 	}
 }
 
