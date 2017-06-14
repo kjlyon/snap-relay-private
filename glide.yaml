@@ -1,0 +1,34 @@
+package: github.com/intelsdi-x/snap-relay
+import:
+- package: github.com/Sirupsen/logrus
+  version: ^1.0.0
+- package: github.com/jcooklin/snap-plugin-lib-go
+  version: fb/enables-streaming
+  subpackages:
+  - v1/plugin
+- package: github.com/jcooklin/snap
+  version: fb/enables-streaming
+  subpackages:
+  - control/plugin
+  - control/plugin/client
+  - core
+  - core/cdata
+  - core/ctypes
+- package: github.com/urfave/cli
+  version: ^1.19.1
+- package: google.golang.org/grpc
+  version: 0032a855ba5c8a3c8e0d71c2deef354b70af1584
+  subpackages:
+  - codes
+  - credentials
+  - grpclog
+  - internal
+  - metadata
+  - naming
+  - peer
+  - transport
+testImport:
+- package: github.com/smartystreets/goconvey
+  version: ^1.6.2
+  subpackages:
+  - convey
