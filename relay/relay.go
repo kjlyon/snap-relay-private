@@ -39,7 +39,27 @@ type relayMetrics interface {
 
 type relay struct {
 	graphiteServer relayMetrics
+	statsdServer   relayMetrics
 }
+
+// Trying Things...
+/*
+type GSoption struct {
+	gOpt []graphite.Option
+	sOpt []statsd.Option
+}
+
+func New(opts GSoption) plugin.StreamCollector {
+	// isgraphite()
+	// isstads()
+
+	return &relay{
+
+		graphiteServer: graphite.NewGraphite(GSoption.gOpt),
+		//	statsdServer:   statsd.NewStatsd(opts...),
+	}
+}
+*/
 
 func New(opts ...graphite.Option) plugin.StreamCollector {
 	return &relay{
@@ -52,7 +72,9 @@ func (r *relay) StreamMetrics(ctx context.Context, metrics_in chan []plugin.Metr
 	for metrics := range metrics_in {
 		log.Debug("starting StreamMetrics")
 		graphiteDispatchStarted := false
+		statsdDispatchStarted := false
 		r.graphiteServer.Start()
+		r.statsdServer.Start()
 		log.WithFields(
 			log.Fields{
 				"len(metrics)": len(metrics),
@@ -79,6 +101,10 @@ func (r *relay) StreamMetrics(ctx context.Context, metrics_in chan []plugin.Metr
 			if !graphiteDispatchStarted && strings.Contains(metric.Namespace.String(), "collectd") {
 				graphiteDispatchStarted = true
 				go dispatchMetrics(ctx, r.graphiteServer.Metrics(ctx), metrics_out)
+			}
+			if !statsdDispatchStarted && strings.Contains(metric.Namespace.String(), "statsd") {
+				statsdDispatchStarted = true
+				go dispatchMetrics(ctx, r.statsdServer.Metrics(ctx), metrics_out)
 			}
 		}
 	}
