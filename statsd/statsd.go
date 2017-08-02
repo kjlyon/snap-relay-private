@@ -43,7 +43,7 @@ type statsd struct {
 	isStarted bool
 }
 
-func NewStatsd(opts []relayOption) *statsd {
+func NewStatsd(opts ...Option) *statsd {
 	statsd := &statsd{
 		udp:       protocol.NewUDPListener(),
 		tcp:       protocol.NewTCPListener(),
@@ -60,13 +60,9 @@ func NewStatsd(opts []relayOption) *statsd {
 
 type Option func(sd *statsd) Option
 
-func (o *Option) Type() string {
+func (o Option) Type() string {
 	return "statsd"
 }
-
-// func New(inputs ...Option) *statsd {
-// 	return NewStatsd(inputs...)
-// }
 
 func UDPConnectionOption(conn *net.UDPConn) Option {
 	return func(sd *statsd) Option {

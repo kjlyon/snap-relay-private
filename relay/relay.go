@@ -45,51 +45,25 @@ type relay struct {
 
 type relayOption interface {
 	Type() string
-
-	//New(relayOption) *relayMetrics
 }
-
-// Trying Things...
-/*
-type GSoption struct {
-	gOpt []graphite.Option
-	sOpt []statsd.Option
-}
-
-func New(opts GSoption) plugin.StreamCollector {
-	// isgraphite()
-	// isstads()
-
-	return &relay{
-
-		graphiteServer: graphite.NewGraphite(GSoption.gOpt),
-		//	statsdServer:   statsd.NewStatsd(opts...),
-	}
-}
-*/
 
 func New(opts ...relayOption) plugin.StreamCollector {
-	r := relay{}
-	var gOpts []relayOption
-	var sOpts []relayOption
+	var gOpts []graphite.Option
+	var sOpts []statsd.Option
 	for _, x := range opts {
-		switch x.Type() {
-		case "graphite":
-			gOpts = append(gOpts, x)
-		case "statsd":
-			sOpts = append(sOpts, x)
+
+		switch t := x.(type) {
+		case graphite.Option:
+			gOpts = append(gOpts, t)
+		case statsd.Option:
+			sOpts = append(sOpts, t)
 		}
 	}
 
 	return &relay{
-		//graphiteServer: graphite.NewGraphite(gOpts...),
-		//graphiteServer: graphite.New(gOpts...),
-		//statsdServer:   statsd.New(sOpts...),
 
-		graphiteServer: graphite.NewGraphite(gOpts),
-		statsdServer:   statsd.NewStatsd(sOpts),
-		// graphiteServer: graphite.New(opts...),
-		// statsdServer:   statsd.New(sOpts...),
+		graphiteServer: graphite.NewGraphite(gOpts...),
+		statsdServer:   statsd.NewStatsd(sOpts...),
 	}
 }
 
