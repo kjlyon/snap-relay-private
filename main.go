@@ -34,8 +34,14 @@ func main() {
 	plugin.Flags = append(plugin.Flags, graphite.GraphiteUDPListenPortFlag)
 	plugin.StartStreamCollector(
 		relay.New(
+			//relay.GSoption{
+			//	gOpt = {
 			graphite.TCPListenPortOption(&graphite.GraphiteTCPPort),
 			graphite.UDPListenPortOption(&graphite.GraphiteUDPPort),
+			//}
+
+			//statsd.UDPListenPortOption(&statsd.)
+			//}
 		),
 		pluginName,
 		pluginVersion,

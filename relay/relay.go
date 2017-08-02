@@ -25,6 +25,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/intelsdi-x/snap-plugin-lib-go/v1/plugin"
 	"github.com/intelsdi-x/snap-relay/graphite"
+	"github.com/intelsdi-x/snap-relay/statsd"
 )
 
 const (
@@ -40,6 +41,13 @@ type relayMetrics interface {
 type relay struct {
 	graphiteServer relayMetrics
 	statsdServer   relayMetrics
+}
+
+type relayOption interface {
+	Type() string
+	statsd.Option
+
+	//New(relayOption) *relayMetrics
 }
 
 // Trying Things...
@@ -61,9 +69,28 @@ func New(opts GSoption) plugin.StreamCollector {
 }
 */
 
-func New(opts ...graphite.Option) plugin.StreamCollector {
+func New(opts ...relayOption) plugin.StreamCollector {
+	r := relay{}
+	var gOpts []relayOption
+	var sOpts []relayOption
+	for _, x := range opts {
+		switch x.Type() {
+		case "graphite":
+			gOpts = append(gOpts, x)
+		case "statsd":
+			sOpts = append(sOpts, x)
+		}
+	}
+
 	return &relay{
-		graphiteServer: graphite.NewGraphite(opts...),
+		//graphiteServer: graphite.NewGraphite(gOpts...),
+		//graphiteServer: graphite.New(gOpts...),
+		//statsdServer:   statsd.New(sOpts...),
+
+		graphiteServer: graphite.NewGraphite(gOpts),
+		statsdServer:   statsd.NewStatsd(sOpts),
+		// graphiteServer: graphite.New(opts...),
+		// statsdServer:   statsd.New(sOpts...),
 	}
 }
 

@@ -66,7 +66,7 @@ type graphite struct {
 	isStarted  bool
 }
 
-func NewGraphite(opts ...Option) *graphite {
+func NewGraphite(opts []Option) *graphite {
 	graphite := &graphite{
 		udp:        protocol.NewUDPListener(),
 		tcp:        protocol.NewTCPListener(),
@@ -83,6 +83,14 @@ func NewGraphite(opts ...Option) *graphite {
 }
 
 type Option func(g *graphite) Option
+
+func (o *Option) Type() string {
+	return "graphite"
+}
+
+func New(inputs []Option) *graphite {
+	return NewGraphite(inputs)
+}
 
 // Metrics is provided a context used for communicating cancellation.
 func (g *graphite) Metrics(ctx context.Context) chan *plugin.Metric {
