@@ -21,7 +21,6 @@ package graphite
 import (
 	"context"
 	"errors"
-	"net"
 	"strconv"
 	"strings"
 
@@ -82,8 +81,6 @@ func NewGraphite(opts []Option) *graphite {
 	return graphite
 }
 
-type Option func(g *graphite) Option
-
 func (o *Option) Type() string {
 	return "graphite"
 }
@@ -103,60 +100,6 @@ func (g *graphite) Metrics(ctx context.Context) chan *plugin.Metric {
 		}
 	}()
 	return mchan
-}
-
-func UDPConnectionOption(conn *net.UDPConn) Option {
-	return func(g *graphite) Option {
-		if g.isStarted {
-			log.WithFields(log.Fields{
-				"_block": "UDPConnectionOption",
-			}).Warn("option cannot be set.  service already started")
-			return UDPConnectionOption(nil)
-		}
-		g.udp = protocol.NewUDPListener(protocol.UDPConnectionOption(conn))
-		return UDPConnectionOption(conn)
-	}
-}
-
-func UDPListenPortOption(port *int) Option {
-	return func(g *graphite) Option {
-		if g.isStarted {
-			log.WithFields(log.Fields{
-				"_block": "UDPListenPortOption",
-				"detail": "service already started",
-			}).Warn("option cannot be set")
-			return UDPListenPortOption(port)
-		}
-		g.udp = protocol.NewUDPListener(protocol.UDPListenPortOption(port))
-		return UDPListenPortOption(port)
-	}
-}
-
-func TCPListenPortOption(port *int) Option {
-	return func(g *graphite) Option {
-		if g.isStarted {
-			log.WithFields(log.Fields{
-				"_block": "TCPListenPortOption",
-				"detail": "service already started",
-			}).Warn("option cannot be set")
-			return TCPListenPortOption(port)
-		}
-		g.tcp = protocol.NewTCPListener(protocol.TCPListenPortOption(port))
-		return TCPListenPortOption(port)
-	}
-}
-
-func TCPListenerOption(conn *net.TCPListener) Option {
-	return func(g *graphite) Option {
-		if g.isStarted {
-			log.WithFields(log.Fields{
-				"_block": "TCPConnectionOption",
-			}).Warn("option cannot be set.  service already started")
-			return TCPListenerOption(nil)
-		}
-		g.tcp = protocol.NewTCPListener(protocol.TCPListenerOption(conn))
-		return TCPListenerOption(conn)
-	}
 }
 
 func (g *graphite) Start() error {

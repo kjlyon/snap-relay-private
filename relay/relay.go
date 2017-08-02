@@ -45,7 +45,6 @@ type relay struct {
 
 type relayOption interface {
 	Type() string
-	statsd.Option
 
 	//New(relayOption) *relayMetrics
 }
